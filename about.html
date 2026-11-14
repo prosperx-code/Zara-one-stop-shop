@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Story | Zara One Stop Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="logo" onclick="location.href='index.html'">Zara one stop shop</div>
+    <nav class="desktop-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop Catalog</a>
+      <a href="about.html" style="color:var(--marigold);" class="active">Our Story</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <main class="fade-in" style="max-width:1000px; margin:60px auto; padding:0 20px;">
+    <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:48px; align-items:center; margin-bottom:60px;">
+      <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80"
+           alt="Founder"
+           style="width:100%; height:420px; object-fit:cover; border-radius:var(--radius); box-shadow:var(--shadow);">
+      <div>
+        <h1 style="font-size:2.5rem; margin-bottom:18px; line-height:1.2; color:var(--teal);">
+          Delivering Reliable Standards
+        </h1>
+        <p style="margin-bottom:16px; opacity:0.85; line-height:1.7;">
+          Zara One Stop Shop simplifies procurement for local households. We eliminate the stress of searching across multiple places by gathering quality utilities in one trusted catalog.
+        </p>
+        <p style="opacity:0.9; line-height:1.7;">
+          We source premium air fryers, break-resistant lunch packs, school essentials and robust utility gadgets so you get functional appliances that stand the test of time.
+        </p>
+      </div>
+    </section>
+
+    <hr style="border:none; border-top:1px solid var(--sand); margin-bottom:48px;">
+
+    <h2 style="text-align:center; margin-bottom:32px; font-size:1.7rem;">Core Brand Commitments</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:24px; text-align:center;">
+      <div style="background:var(--white); padding:32px 24px; border-radius:var(--radius); box-shadow:var(--shadow);">
+        <div style="font-size:2rem; margin-bottom:12px;">🔍</div>
+        <h3 style="margin-bottom:8px;">Quality Verification</h3>
+        <p style="font-size:0.95rem; opacity:0.8;">Every inventory line undergoes compliance checks before it reaches the catalog.</p>
+      </div>
+      <div style="background:var(--white); padding:32px 24px; border-radius:var(--radius); box-shadow:var(--shadow);">
+        <div style="font-size:2rem; margin-bottom:12px;">🤝</div>
+        <h3 style="margin-bottom:8px;">Transparent Pricing</h3>
+        <p style="font-size:0.95rem; opacity:0.8;">No hidden charges. Fair market values applied across all products.</p>
+      </div>
+    </div>
+  </main>
+
+  <div class="mobile-nav">
+    <a href="index.html">🏠 Home</a>
+    <a href="shop.html">🛍️ Shop</a>
+    <a href="cart.html">
+    <span>🛒</span><span>Cart (<span class="cart-counter-node">0</span>)</span></a>
+    <a href="contact.html">📞 Contact</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

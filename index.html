@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zara One Stop Shop | Home</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="logo" onclick="location.href='index.html'">Zara one stop shop</div>
+    <nav class="desktop-nav">
+      <a href="index.html" class="active">Home</a>
+      <a href="shop.html">Shop Catalog</a>
+      <a href="about.html">Our Story</a>
+      <a href="contact.html">Contact</a>
+      <a href="admin.html" style="color:var(--marigold); font-weight:600;">🔒 Admin</a>
+      <a href="cart.html">
+      <span>🛒</span>
+      <span>Cart (<span class="cart-counter-node">0</span>)</span>
+      </a>      
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <section style="padding:70px 5%; background:linear-gradient(135deg, var(--sand), #fff8ef); text-align:center;">
+    <h1 style="font-size:clamp(2.1rem, 5vw, 3.1rem); margin-bottom:14px; color:var(--teal); font-weight:700; line-height:1.2;">
+      Welcome to Zara One Stop Shop
+    </h1>
+    <p style="font-size:1.15rem; max-width:560px; margin:0 auto 28px; opacity:0.8; line-height:1.6;">
+      Premium kitchen essentials, gadgets and lifestyle items carefully selected for everyday Nigerian homes.
+    </p>
+    <a href="shop.html" class="btn-primary" style="padding:14px 32px; font-size:1.05rem;">
+      Browse Catalog →
+    </a>
+  </section>
+
+  <!-- Featured -->
+  <main style="padding:60px 5%;" class="fade-in">
+    <h2 class="section-title">Featured Listings</h2>
+    <div id="homepage-product-grid" class="product-grid" style="margin-top:36px;"></div>
+  </main>
+
+  <!-- Simple footer -->
+  <footer style="background:var(--teal); color:var(--cream); padding:28px 5%; text-align:center; font-size:0.9rem;">
+    <p>© 2026 Zara One Stop Shop · Reliable household standards</p>
+  </footer>
+
+  <div class="mobile-nav">
+    <a href="index.html" style="color:var(--teal); font-weight:600;">🏠 Home</a>
+    <a href="shop.html">🛍️ Shop</a>
+    <a href="cart.html">🛒 (<span class="cart-counter-node">0</span>)</a>
+    <a href="contact.html">📞 Contact</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Ensure products are loaded
+      if (AppState.products.length === 0) await loadProducts();
+
+      const grid = document.getElementById('homepage-product-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const displayItems = AppState.products.slice(0, 4);
+
+      if (displayItems.length === 0) {
+        grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; opacity:0.6; padding:40px;">No products yet. Check back soon.</p>';
+        return;
+      }
+
+      displayItems.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+
+        let actionBtn = `<button class="btn-primary" style="padding:9px 14px; font-size:0.9rem;" onclick="addToSelection(${p.id})">Add to selection</button>`;
+        if (p.tag === 'Sold Out') {
+          actionBtn = `<button class="btn-primary btn-disabled" disabled>Sold Out</button>`;
+        }
+
+        card.innerHTML = `
+          ${p.tag && p.tag !== 'None' ? `<span class="badge">${p.tag}</span>` : ''}
+          <img src="${p.img}" alt="${p.name}" onclick="location.href='product.html?id=${p.id}'" style="cursor:pointer;">
+          <h3>${p.name}</h3>
+          <div class="card-footer">
+            <div>
+              ${p.oldPrice ? `<span class="price-old">₦${Number(p.oldPrice).toLocaleString()}</span>` : ''}
+              <span class="price-tag">₦${Number(p.newPrice).toLocaleString()}</span>
+            </div>
+            ${actionBtn}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    });
+  </script>
+</body>
+</html>

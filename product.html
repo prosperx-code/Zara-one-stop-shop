@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product | Zara One Stop Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="logo" onclick="location.href='index.html'">Zara one stop shop</div>
+    <nav class="desktop-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop Catalog</a>
+      <a href="cart.html">Selection (<span class="cart-counter-node">0</span>)</a>
+    </nav>
+  </header>
+
+  <main class="fade-in" style="max-width:1100px; margin:40px auto; padding:0 20px;">
+    <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:48px; margin-bottom:64px; align-items:start;">
+      <div>
+        <img id="detail-main-img" src="" alt=""
+             style="width:100%; height:420px; object-fit:cover; border-radius:var(--radius); box-shadow:var(--shadow);">
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:18px; padding-top:8px;">
+        <h1 id="detail-title" style="font-size:2.1rem; line-height:1.25;">Product</h1>
+        <div>
+          <span id="detail-price-old" class="price-old" style="font-size:1.1rem;"></span>
+          <span id="detail-price-new" class="price-tag" style="font-size:1.5rem;"></span>
+        </div>
+        <p style="opacity:0.8; font-size:1.05rem; line-height:1.6;">
+          Genuine commercial-grade household item. Carefully sourced for durability and everyday performance.
+        </p>
+
+        <div style="display:flex; align-items:center; gap:14px; margin-top:8px;">
+          <label style="font-weight:600;">Quantity</label>
+          <input type="number" id="detail-qty" value="1" min="1" style="width:80px; text-align:center;">
+        </div>
+
+        <button id="detail-cta-btn" class="btn-primary" style="width:fit-content; padding:14px 32px; margin-top:8px;">
+          Add to Selection
+        </button>
+      </div>
+    </section>
+
+    <h2 style="margin-bottom:20px; font-size:1.5rem;">You may also like</h2>
+    <div id="related-grid-root" class="product-grid"></div>
+  </main>
+
+  <div class="mobile-nav">
+    <a href="index.html">🏠 Home</a>
+    <a href="shop.html">🛍️ Shop</a>
+<a href="cart.html">
+  <span>🛒</span>
+  <span>Cart (<span class="cart-counter-node">0</span>)</span>
+</a>    <a href="contact.html">📞 Contact</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (AppState.products.length === 0) await loadProducts();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetId = parseInt(urlParams.get('id'));
+      const item = AppState.products.find(p => p.id === targetId) || AppState.products[0];
+
+      if (!item) {
+        document.getElementById('detail-title').textContent = 'Product not found';
+        return;
+      }
+
+      document.title = `${item.name} | Zara One Stop Shop`;
+      document.getElementById('detail-main-img').src = item.img;
+      document.getElementById('detail-main-img').alt = item.name;
+      document.getElementById('detail-title').textContent = item.name;
+      document.getElementById('detail-price-new').textContent = `₦${Number(item.newPrice).toLocaleString()}`;
+
+      if (item.oldPrice) {
+        document.getElementById('detail-price-old').textContent = `₦${Number(item.oldPrice).toLocaleString()}`;
+      } else {
+        document.getElementById('detail-price-old').style.display = 'none';
+      }
+
+      const ctaBtn = document.getElementById('detail-cta-btn');
+      if (item.tag === 'Sold Out') {
+        ctaBtn.textContent = 'Sold Out';
+        ctaBtn.classList.add('btn-disabled');
+        ctaBtn.disabled = true;
+      } else {
+        ctaBtn.addEventListener('click', () => {
+          const qty = document.getElementById('detail-qty').value;
+          addToSelection(item.id, qty);
+        });
+      }
+
+      // Related
+      const relatedRoot = document.getElementById('related-grid-root');
+      AppState.products
+        .filter(p => p.id !== item.id)
+        .slice(0, 3)
+        .forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'product-card';
+          div.innerHTML = `
+            <img src="${p.img}" alt="${p.name}" onclick="location.href='product.html?id=${p.id}'" style="cursor:pointer;">
+            <h3>${p.name}</h3>
+            <div class="card-footer">
+              <span class="price-tag">₦${Number(p.newPrice).toLocaleString()}</span>
+            </div>
+          `;
+          relatedRoot.appendChild(div);
+        });
+    });
+  </script>
+</body>
+</html>

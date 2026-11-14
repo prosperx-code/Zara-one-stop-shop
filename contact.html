@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact | Zara One Stop Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="logo" onclick="location.href='index.html'">Zara one stop shop</div>
+    <nav class="desktop-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop Catalog</a>
+      <a href="contact.html" style="color:var(--marigold);" class="active">Contact</a>
+    </nav>
+  </header>
+
+  <main class="fade-in" style="max-width:1100px; margin:50px auto; padding:0 20px; display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:48px;">
+    
+    <section style="display:flex; flex-direction:column; gap:22px;">
+      <h1 style="font-size:2.1rem;">Get in Touch</h1>
+      <p style="opacity:0.8; line-height:1.6;">
+        Questions about bulk supply, special requests or product availability? Reach us through any of the channels below.
+      </p>
+
+      <a href="https://wa.me/2349028209111" target="_blank"
+         style="background:var(--white); padding:20px; border-radius:var(--radius); display:flex; align-items:center; gap:18px; box-shadow:var(--shadow); transition:var(--transition);">
+        <div style="background:#25D366; color:white; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">💬</div>
+        <div>
+          <h4 style="margin-bottom:2px;">Official WhatsApp</h4>
+          <p style="font-size:0.9rem; opacity:0.7;">Fastest response channel</p>
+        </div>
+      </a>
+
+      <div style="background:var(--white); padding:20px; border-radius:var(--radius); display:flex; align-items:center; gap:18px; box-shadow:var(--shadow);">
+        <div style="background:var(--clay); color:white; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">📸</div>
+        <div>
+          <h4 style="margin-bottom:2px;">Instagram</h4>
+          <p style="font-size:0.9rem; opacity:0.7;">@zara_onestopshop</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="background:var(--white); padding:32px; border-radius:var(--radius); box-shadow:var(--shadow);">
+      <h3 style="margin-bottom:20px; font-size:1.3rem;">Send a Message</h3>
+      <form id="contact-form-node" style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-weight:600;">Full Name</label>
+          <input type="text" required>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-weight:600;">Email Address</label>
+          <input type="email" required>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-weight:600;">Message</label>
+          <textarea rows="4" required></textarea>
+        </div>
+        <button class="btn-primary" type="submit">Send Message</button>
+      </form>
+    </section>
+  </main>
+
+  <div class="mobile-nav">
+    <a href="index.html">🏠 Home</a>
+    <a href="shop.html">🛍️ Shop</a>
+<a href="cart.html">
+  <span>🛒</span>
+  <span>Cart (<span class="cart-counter-node">0</span>)</span>
+</a>    <a href="contact.html" style="color:var(--teal); font-weight:600;">📞 Contact</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById('contact-form-node').addEventListener('submit', (e) => {
+      e.preventDefault();
+      showToast('Message received! We will get back to you soon.', 'success');
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>
