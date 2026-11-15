@@ -49,7 +49,7 @@ const supabaseClient =
 window.AppState = {
   products: [],
   cart: safeJsonParse('zara_cart', []),
-  user: safeJsonParse('zara_shop_session', null),
+  user: null, // filled from the Supabase session by initAuth()
   isAdmin: false,
   supabaseReady: !!supabaseClient
 };
@@ -218,29 +218,76 @@ function showToast(message, type = 'info') {
 }
 
 // ------------------------------------------------------------
-// "Your details" (saved only on this device, no password)
+// Customer accounts (real Supabase sign-in)
 // ------------------------------------------------------------
+function userFromSession(session) {
+  if (!session || !session.user) return null;
+  const meta = session.user.user_metadata || {};
+  return {
+    id: session.user.id,
+    email: session.user.email || '',
+    name: String(meta.name || ''),
+    phone: String(meta.phone || '')
+  };
+}
+
+async function initAuth() {
+  if (!supabaseClient) return;
+  try {
+    const {
+      data: { session }
+    } = await supabaseClient.auth.getSession();
+    AppState.user = userFromSession(session);
+  } catch (e) {
+    AppState.user = null;
+  }
+  renderProfileNavigationAnchors();
+
+  // Keep the menu in sync when someone signs in or out (also in other tabs)
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    AppState.user = userFromSession(session);
+    renderProfileNavigationAnchors();
+  });
+}
+
 function renderProfileNavigationAnchors() {
   const anchor = document.getElementById('profile-nav-anchor');
-  if (!anchor) return;
+  const mobile = document.getElementById('mobile-account-link');
 
-  if (AppState.user && AppState.user.name) {
-    const firstName = escapeHtml(String(AppState.user.name).split(' ')[0]);
-    anchor.innerHTML = `
-      <span style="font-weight:600; color:var(--marigold);">Hi, ${firstName}</span>
-      <a href="#" onclick="processAccountLogOut(); return false;" style="font-size:0.9rem; opacity:0.85; margin-left:8px;">Clear details</a>
-    `;
+  if (AppState.user) {
+    const label = AppState.user.name || AppState.user.email.split('@')[0] || 'there';
+    const first = escapeHtml(label.split(' ')[0]);
+    if (anchor) {
+      anchor.innerHTML = `
+        <a href="account.html" style="font-weight:600; color:var(--marigold);">Hi, ${first}</a>
+        <a href="#" onclick="processAccountLogOut(); return false;" style="font-size:0.9rem; opacity:0.85; margin-left:12px;">Sign out</a>`;
+    }
+    if (mobile) {
+      mobile.href = 'account.html';
+      mobile.textContent = '👤 Account';
+    }
   } else {
-    anchor.innerHTML = `<a href="register.html">Your Details</a>`;
+    if (anchor) {
+      anchor.innerHTML = `
+        <a href="signin.html">Sign In</a>
+        <a href="register.html" class="btn-secondary" style="padding:6px 14px; font-size:0.85rem; margin-left:12px;">Register</a>`;
+    }
+    if (mobile) {
+      mobile.href = 'signin.html';
+      mobile.textContent = '👤 Sign In';
+    }
   }
 }
 
-function processAccountLogOut() {
+async function processAccountLogOut() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
   AppState.user = null;
-  localStorage.removeItem('zara_shop_session');
-  showToast('Your saved details were cleared.');
+  showToast('You have signed out.');
   setTimeout(() => window.location.reload(), 700);
 }
+
+// Start loading the session right away; pages can `await authReady`
+const authReady = initAuth();
 
 // ------------------------------------------------------------
 // Init

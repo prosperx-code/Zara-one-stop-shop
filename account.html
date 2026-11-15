@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account | Zara One Stop Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="logo" onclick="location.href='index.html'" style="cursor:pointer;">Zara one stop shop</div>
+    <nav class="desktop-nav">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop Catalog</a>
+      <a href="cart.html">Selection (<span class="cart-counter-node">0</span>)</a>
+      <span id="profile-nav-anchor" style="display:flex; align-items:center;"></span>
+    </nav>
+  </header>
+
+  <main class="fade-in">
+    <div class="form-container">
+      <h2 style="font-size:1.9rem; margin-bottom:6px; text-align:center;">My account</h2>
+      <p id="account-email" style="text-align:center; opacity:0.7; margin-bottom:24px; word-break:break-all;"></p>
+
+      <form id="profile-form" style="display:flex; flex-direction:column; gap:16px; margin-bottom:28px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-weight:600;">Full Name</label>
+          <input type="text" id="acc-name" required maxlength="80">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-weight:600;">Phone Number</label>
+          <input type="tel" id="acc-phone" required maxlength="20">
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;">Save details</button>
+      </form>
+
+      <h3 style="font-size:1.1rem; margin-bottom:12px;">Change password</h3>
+      <form id="password-form" style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-weight:600;">New password (at least 8 characters)</label>
+          <input type="password" id="acc-pass" required minlength="8" maxlength="72" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn-secondary" style="width:100%;">Update password</button>
+      </form>
+
+      <button id="acc-signout" class="btn-secondary" style="width:100%; background:var(--clay); color:white;">Sign out</button>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await authReady;
+      if (!AppState.user) { location.href = 'signin.html'; return; }
+
+      document.getElementById('account-email').textContent = AppState.user.email;
+      document.getElementById('acc-name').value = AppState.user.name;
+      document.getElementById('acc-phone').value = AppState.user.phone;
+    });
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('acc-name').value.trim();
+      const phone = document.getElementById('acc-phone').value.trim();
+      const { error } = await supabaseClient.auth.updateUser({ data: { name, phone } });
+      showToast(error ? (error.message || 'Could not save.') : 'Details saved.', error ? 'error' : 'success');
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pass = document.getElementById('acc-pass').value;
+      if (pass.length < 8) { showToast('Password must be at least 8 characters.', 'error'); return; }
+      const { error } = await supabaseClient.auth.updateUser({ password: pass });
+      if (!error) e.target.reset();
+      showToast(error ? (error.message || 'Could not update the password.') : 'Password updated.', error ? 'error' : 'success');
+    });
+
+    document.getElementById('acc-signout').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>
