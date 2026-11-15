@@ -47,7 +47,7 @@
 <a href="contact.html">📞 Contact</a>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
   <script>
@@ -56,77 +56,81 @@
       const totalNode = document.getElementById('cart-grand-total');
       if (!root) return;
 
-      root.innerHTML = '';
-      let accumulativeSum = 0;
+      // Drop items that are no longer in the catalog
+      if (AppState.products.length > 0) {
+        const before = AppState.cart.length;
+        AppState.cart = AppState.cart.filter(i => AppState.products.some(p => p.id === i.id));
+        if (AppState.cart.length !== before) saveSelectionCartState();
+      }
 
-      if (!AppState.cart || AppState.cart.length === 0) {
+      if (AppState.cart.length === 0) {
         root.innerHTML = `
           <div style="text-align:center; padding:48px 24px; background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow);">
             <p style="font-size:1.1rem; margin-bottom:12px;">Your selection is empty</p>
             <a href="shop.html" class="btn-primary" style="display:inline-block; margin-top:8px;">Browse Catalog</a>
           </div>`;
-        totalNode.innerText = '₦0';
+        totalNode.textContent = '₦0';
         return;
       }
 
-      AppState.cart.forEach(item => {
+      let sum = 0;
+      root.innerHTML = AppState.cart.map(item => {
         const product = AppState.products.find(p => p.id === item.id);
-        if (!product) return;
+        if (!product) return '';
+        sum += product.newPrice * item.qty;
+        const id = Number(product.id);
+        return `
+          <div style="background:var(--white); padding:16px; border-radius:var(--radius); display:flex; align-items:center; gap:18px; box-shadow:var(--shadow); flex-wrap:wrap;">
+            <img src="${escapeHtml(safeImgUrl(product.img))}" alt="" style="width:72px; height:72px; object-fit:cover; border-radius:10px;">
+            <div style="flex:1; min-width:180px;">
+              <h3 style="font-size:1.05rem; margin-bottom:4px;">${escapeHtml(product.name)}</h3>
+              <span class="price-tag" style="font-size:1rem;">₦${Number(product.newPrice).toLocaleString()}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="number" value="${item.qty}" min="1" max="99" style="width:70px; text-align:center; padding:8px;"
+                     onchange="updateSelectionQty(${id}, this.value)">
+              <button class="btn-secondary" style="background:var(--clay); color:white; padding:8px 14px; font-size:0.85rem;"
+                      onclick="removeFromSelection(${id})">Remove</button>
+            </div>
+          </div>`;
+      }).join('');
 
-        const rowCost = product.newPrice * item.qty;
-        accumulativeSum += rowCost;
-
-        const row = document.createElement('div');
-        row.style.cssText = 'background:var(--white); padding:16px; border-radius:var(--radius); display:flex; align-items:center; gap:18px; box-shadow:var(--shadow); flex-wrap:wrap;';
-        row.innerHTML = `
-          <img src="${product.img}" style="width:72px; height:72px; object-fit:cover; border-radius:10px;">
-          <div style="flex:1; min-width:180px;">
-            <h3 style="font-size:1.05rem; margin-bottom:4px;">${product.name}</h3>
-            <span class="price-tag" style="font-size:1rem;">₦${Number(product.newPrice).toLocaleString()}</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <input type="number" value="${item.qty}" min="1" style="width:70px; text-align:center; padding:8px;"
-                   onchange="updateSelectionQty(${product.id}, this.value)">
-            <button class="btn-secondary" style="background:var(--clay); color:white; padding:8px 14px; font-size:0.85rem;"
-                    onclick="removeFromSelection(${product.id})">Remove</button>
-          </div>
-        `;
-        root.appendChild(row);
-      });
-
-      totalNode.innerText = `₦${accumulativeSum.toLocaleString()}`;
+      totalNode.textContent = `₦${sum.toLocaleString()}`;
     }
 
     function processWhatsAppOrder() {
-      if (!AppState.cart || AppState.cart.length === 0) {
+      if (AppState.cart.length === 0) {
         showToast('Your selection is empty.', 'error');
         return;
       }
-
-      const number = (typeof WHATSAPP_NUMBER !== 'undefined' && WHATSAPP_NUMBER)
-        ? WHATSAPP_NUMBER
-        : '2349028209111';
+      if (typeof WHATSAPP_NUMBER === 'undefined' || !WHATSAPP_NUMBER) {
+        showToast('Ordering is not set up yet.', 'error');
+        return;
+      }
 
       let message = "Hello Zara One Stop Shop! I'd like to place an order:\n\n";
-      let totalSum = 0;
+      let total = 0;
 
       AppState.cart.forEach((item, index) => {
         const p = AppState.products.find(prod => prod.id === item.id);
         if (p) {
           const lineCost = p.newPrice * item.qty;
-          totalSum += lineCost;
+          total += lineCost;
           message += `${index + 1}. ${p.name} (Qty: ${item.qty}) — ₦${lineCost.toLocaleString()}\n`;
         }
       });
 
-      message += `\n*Grand Total:* ₦${totalSum.toLocaleString()}`;
+      message += `\n*Grand Total:* ₦${total.toLocaleString()}`;
 
-      const encoded = encodeURIComponent(message);
-      window.open(`https://wa.me/${number}?text=${encoded}`, '_blank');
+      if (AppState.user && AppState.user.name) {
+        message += `\n\nName: ${AppState.user.name}\nPhone: ${AppState.user.phone || ''}`;
+      }
+
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      if (AppState.products.length === 0) await loadProducts();
+      await loadProducts();
       renderCartPage();
     });
   </script>

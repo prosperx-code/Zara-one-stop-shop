@@ -1,124 +1,153 @@
 // ============================================================
 // Zara One Stop Shop — Core Application Logic
+// Load order on every page: supabase script -> config.js -> app.js
 // ============================================================
 
-// Load config (must be included before this file)
-const supabaseClient = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT'))
-  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+const FALLBACK_IMG =
+  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80';
+
+// ------------------------------------------------------------
+// Safe helpers (stop injected HTML / bad links from running)
+// ------------------------------------------------------------
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Only allow normal web images (blocks javascript: links and similar)
+function safeImgUrl(url) {
+  const s = String(url || '');
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(s)) return s;
+  return FALLBACK_IMG;
+}
+
+function safeJsonParse(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+// ------------------------------------------------------------
+// Supabase client (public key only — never put a secret key here)
+// ------------------------------------------------------------
+const supabaseClient =
+  typeof supabase !== 'undefined' &&
+  typeof SUPABASE_URL !== 'undefined' &&
+  SUPABASE_URL &&
+  !SUPABASE_URL.includes('YOUR_PROJECT')
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
 window.AppState = {
   products: [],
-  cart: JSON.parse(localStorage.getItem('zara_cart')) || [],
-  user: JSON.parse(localStorage.getItem('zara_shop_session')) || null,
+  cart: safeJsonParse('zara_cart', []),
+  user: safeJsonParse('zara_shop_session', null),
   isAdmin: false,
   supabaseReady: !!supabaseClient
 };
 
-// Fallback demo products (used only when Supabase is not configured or fails)
-const fallbackInventoryData = [
-  {
-    id: 101,
-    name: "Premium Commercial Digital Air Fryer",
-    category: "Kitchen",
-    oldPrice: 85000,
-    newPrice: 68000,
-    tag: "Sale",
-    img: "https://images.unsplash.com/photo-1621972750749-0fbb1abb7736?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    id: 102,
-    name: "Break-Resistant 4-In-1 Kids Lunch Pack",
-    category: "Kids",
-    oldPrice: 15000,
-    newPrice: 12000,
-    tag: "Hot",
-    img: "https://images.unsplash.com/photo-1606168094316-0cd4b60e9095?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    id: 103,
-    name: "Heavy-Duty Sourcing Utility Gadget",
-    category: "Gadgets",
-    oldPrice: null,
-    newPrice: 34500,
-    tag: "None",
-    img: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    id: 104,
-    name: "Standard Anti-Shatter Household Glass Set",
-    category: "Home & Living",
-    oldPrice: 28000,
-    newPrice: 24000,
-    tag: "Sold Out",
-    img: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80"
-  }
-];
+// Clean up a cart that was damaged or edited by hand
+AppState.cart = (Array.isArray(AppState.cart) ? AppState.cart : []).filter(
+  (i) => i && Number.isInteger(i.id) && Number.isInteger(i.qty) && i.qty > 0 && i.qty <= 99
+);
 
 // ------------------------------------------------------------
-// Product loading
+// Product loading (one shared request, even if several scripts ask)
 // ------------------------------------------------------------
-async function loadProducts() {
-  if (supabaseClient) {
-    try {
-      const { data, error } = await supabaseClient
-        .from('products')
-        .select('*')
-        .order('id', { ascending: true });
+let productsPromise = null;
 
-      if (error) throw error;
+function loadProducts(force = false) {
+  if (!productsPromise || force) productsPromise = fetchProducts();
+  return productsPromise;
+}
 
-      AppState.products = (data || []).map(row => ({
-        id: row.id,
-        name: row.name,
-        category: row.category,
-        oldPrice: row.old_price,
-        newPrice: row.new_price,
-        tag: row.tag || 'None',
-        img: row.img || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'
-      }));
-
-      // Keep a local mirror for offline resilience
-      localStorage.setItem('zara_dynamic_products', JSON.stringify(AppState.products));
-      return;
-    } catch (err) {
-      console.warn('Supabase products load failed, using fallback:', err.message);
-    }
+async function fetchProducts() {
+  if (!supabaseClient) {
+    AppState.products = [];
+    return;
   }
+  try {
+    const { data, error } = await supabaseClient
+      .from('products')
+      .select('*')
+      .order('id', { ascending: true });
 
-  // Fallback path
-  const stored = JSON.parse(localStorage.getItem('zara_dynamic_products'));
-  if (stored && stored.length > 0) {
-    AppState.products = stored;
-  } else {
-    AppState.products = fallbackInventoryData;
-    localStorage.setItem('zara_dynamic_products', JSON.stringify(AppState.products));
+    if (error) throw error;
+
+    AppState.products = (data || []).map((row) => ({
+      id: Number(row.id),
+      name: String(row.name || ''),
+      category: String(row.category || ''),
+      oldPrice: row.old_price == null ? null : Number(row.old_price),
+      newPrice: Number(row.new_price),
+      tag: row.tag || 'None',
+      img: safeImgUrl(row.img)
+    }));
+  } catch (err) {
+    console.warn('Could not load products:', err.message);
+    AppState.products = [];
+    showToast('Could not load products. Please refresh the page.', 'error');
   }
+}
+
+// One product card, used by the home, shop and product pages
+function renderProductCard(p) {
+  const id = Number(p.id);
+  const badge =
+    p.tag && p.tag !== 'None' ? `<span class="badge">${escapeHtml(p.tag)}</span>` : '';
+  const action =
+    p.tag === 'Sold Out'
+      ? `<button class="btn-primary btn-disabled" disabled>Sold Out</button>`
+      : `<button class="btn-primary" style="padding:9px 14px; font-size:0.9rem;" onclick="addToSelection(${id})">Add to selection</button>`;
+  const old = p.oldPrice
+    ? `<span class="price-old">₦${Number(p.oldPrice).toLocaleString()}</span>`
+    : '';
+
+  return `
+    <div class="product-card">
+      ${badge}
+      <img src="${escapeHtml(safeImgUrl(p.img))}" alt="${escapeHtml(p.name)}"
+           onclick="location.href='product.html?id=${id}'" style="cursor:pointer;">
+      <h3>${escapeHtml(p.name)}</h3>
+      <div class="card-footer">
+        <div>${old}<span class="price-tag">₦${Number(p.newPrice).toLocaleString()}</span></div>
+        ${action}
+      </div>
+    </div>`;
 }
 
 // ------------------------------------------------------------
 // Cart helpers
 // ------------------------------------------------------------
 function addToSelection(productId, quantity = 1) {
-  const targetId = parseInt(productId);
-  const qtyNum = parseInt(quantity) || 1;
-  const product = AppState.products.find(p => p.id === targetId);
+  const targetId = parseInt(productId, 10);
+  let qtyNum = parseInt(quantity, 10);
+  if (!Number.isFinite(qtyNum) || qtyNum < 1) qtyNum = 1;
+
+  const product = AppState.products.find((p) => p.id === targetId);
 
   if (!product) {
-    showToast('Product not found.');
+    showToast('Product not found.', 'error');
     return;
   }
-
   if (product.tag === 'Sold Out') {
     showToast('This item is currently out of stock.');
     return;
   }
 
-  const existingItem = AppState.cart.find(item => item.id === targetId);
-  if (existingItem) {
-    existingItem.qty += qtyNum;
+  const existing = AppState.cart.find((item) => item.id === targetId);
+  if (existing) {
+    existing.qty = Math.min(99, existing.qty + qtyNum);
   } else {
-    AppState.cart.push({ id: targetId, qty: qtyNum });
+    AppState.cart.push({ id: targetId, qty: Math.min(99, qtyNum) });
   }
 
   saveSelectionCartState();
@@ -126,8 +155,8 @@ function addToSelection(productId, quantity = 1) {
 }
 
 function removeFromSelection(productId) {
-  const targetId = parseInt(productId);
-  AppState.cart = AppState.cart.filter(item => item.id !== targetId);
+  const targetId = parseInt(productId, 10);
+  AppState.cart = AppState.cart.filter((item) => item.id !== targetId);
   saveSelectionCartState();
 
   if (typeof renderCartPage === 'function') renderCartPage();
@@ -135,11 +164,14 @@ function removeFromSelection(productId) {
 }
 
 function updateSelectionQty(productId, newQty) {
-  const targetId = parseInt(productId);
-  const count = parseInt(newQty);
-  if (count < 1) return;
+  const targetId = parseInt(productId, 10);
+  const count = parseInt(newQty, 10);
+  if (!Number.isFinite(count) || count < 1 || count > 99) {
+    if (typeof renderCartPage === 'function') renderCartPage();
+    return;
+  }
 
-  const item = AppState.cart.find(i => i.id === targetId);
+  const item = AppState.cart.find((i) => i.id === targetId);
   if (item) {
     item.qty = count;
     saveSelectionCartState();
@@ -154,8 +186,8 @@ function saveSelectionCartState() {
 
 function updateCartCounter() {
   const nodes = document.querySelectorAll('.cart-counter-node');
-  const countSum = AppState.cart.reduce((acc, current) => acc + current.qty, 0);
-  nodes.forEach(n => (n.innerText = countSum));
+  const total = AppState.cart.reduce((sum, current) => sum + current.qty, 0);
+  nodes.forEach((n) => (n.textContent = total));
 }
 
 // ------------------------------------------------------------
@@ -174,7 +206,7 @@ function showToast(message, type = 'info') {
   const box = document.createElement('div');
   const bg = type === 'error' ? 'var(--clay)' : type === 'success' ? '#0d9488' : 'var(--teal)';
   box.style.cssText = `background:${bg}; color:var(--white); padding:14px 22px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); font-weight:500; font-size:0.95rem; animation:fadeInFrame 0.3s ease;`;
-  box.innerText = message;
+  box.textContent = message;
   container.appendChild(box);
 
   setTimeout(() => {
@@ -186,27 +218,27 @@ function showToast(message, type = 'info') {
 }
 
 // ------------------------------------------------------------
-// Profile / session helpers (guest friendly)
+// "Your details" (saved only on this device, no password)
 // ------------------------------------------------------------
 function renderProfileNavigationAnchors() {
   const anchor = document.getElementById('profile-nav-anchor');
   if (!anchor) return;
 
-  if (AppState.user) {
-    const firstName = (AppState.user.name || 'Customer').split(' ')[0];
+  if (AppState.user && AppState.user.name) {
+    const firstName = escapeHtml(String(AppState.user.name).split(' ')[0]);
     anchor.innerHTML = `
       <span style="font-weight:600; color:var(--marigold);">Hi, ${firstName}</span>
-      <a href="#" onclick="processAccountLogOut(); return false;" style="font-size:0.9rem; opacity:0.85; margin-left:8px;">Sign Out</a>
+      <a href="#" onclick="processAccountLogOut(); return false;" style="font-size:0.9rem; opacity:0.85; margin-left:8px;">Clear details</a>
     `;
   } else {
-    anchor.innerHTML = `<a href="signin.html">Sign In</a>`;
+    anchor.innerHTML = `<a href="register.html">Your Details</a>`;
   }
 }
 
 function processAccountLogOut() {
   AppState.user = null;
   localStorage.removeItem('zara_shop_session');
-  showToast('Signed out successfully.');
+  showToast('Your saved details were cleared.');
   setTimeout(() => window.location.reload(), 700);
 }
 
@@ -214,7 +246,7 @@ function processAccountLogOut() {
 // Init
 // ------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadProducts();
   updateCartCounter();
   renderProfileNavigationAnchors();
+  await loadProducts();
 });

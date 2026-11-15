@@ -19,7 +19,7 @@
       <a href="about.html">Our Story</a>
       <a href="contact.html">Contact</a>
       <a href="cart.html">🛒 Selection (<span class="cart-counter-node">0</span>)</a>
-      <span id="profile-nav-anchor"><a href="signin.html">Sign In</a></span>
+      <span id="profile-nav-anchor"><a href="register.html">Your Details</a></span>
     </nav>
   </header>
 
@@ -62,12 +62,12 @@
 </a>    <a href="contact.html">📞 Contact</a>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      if (AppState.products.length === 0) await loadProducts();
+      await loadProducts();
       renderShopCatalogItems();
 
       document.getElementById('search-input').addEventListener('input', renderShopCatalogItems);
@@ -78,7 +78,6 @@
       const grid = document.getElementById('shop-product-grid');
       const countEl = document.getElementById('result-count');
       if (!grid) return;
-      grid.innerHTML = '';
 
       const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
       const catVal = document.getElementById('category-filter').value;
@@ -91,34 +90,9 @@
 
       if (countEl) countEl.textContent = `${filtered.length} item${filtered.length !== 1 ? 's' : ''}`;
 
-      if (filtered.length === 0) {
-        grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--gray);">No products match your filters.</p>`;
-        return;
-      }
-
-      filtered.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'product-card';
-
-        let actionBtn = `<button class="btn-primary" style="padding:9px 14px; font-size:0.9rem;" onclick="addToSelection(${p.id})">Add to selection</button>`;
-        if (p.tag === 'Sold Out') {
-          actionBtn = `<button class="btn-primary btn-disabled" disabled>Sold Out</button>`;
-        }
-
-        card.innerHTML = `
-          ${p.tag && p.tag !== 'None' ? `<span class="badge">${p.tag}</span>` : ''}
-          <img src="${p.img}" alt="${p.name}" onclick="location.href='product.html?id=${p.id}'" style="cursor:pointer;">
-          <h3>${p.name}</h3>
-          <div class="card-footer">
-            <div>
-              ${p.oldPrice ? `<span class="price-old">₦${Number(p.oldPrice).toLocaleString()}</span>` : ''}
-              <span class="price-tag">₦${Number(p.newPrice).toLocaleString()}</span>
-            </div>
-            ${actionBtn}
-          </div>
-        `;
-        grid.appendChild(card);
-      });
+      grid.innerHTML = filtered.length
+        ? filtered.map(renderProductCard).join('')
+        : '<p style="grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--gray);">No products match your filters.</p>';
     }
   </script>
 

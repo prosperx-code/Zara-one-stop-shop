@@ -61,15 +61,14 @@
 </a>    <a href="contact.html">📞 Contact</a>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      if (AppState.products.length === 0) await loadProducts();
+      await loadProducts();
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const targetId = parseInt(urlParams.get('id'));
+      const targetId = parseInt(new URLSearchParams(window.location.search).get('id'), 10);
       const item = AppState.products.find(p => p.id === targetId) || AppState.products[0];
 
       if (!item) {
@@ -78,7 +77,7 @@
       }
 
       document.title = `${item.name} | Zara One Stop Shop`;
-      document.getElementById('detail-main-img').src = item.img;
+      document.getElementById('detail-main-img').src = safeImgUrl(item.img);
       document.getElementById('detail-main-img').alt = item.name;
       document.getElementById('detail-title').textContent = item.name;
       document.getElementById('detail-price-new').textContent = `₦${Number(item.newPrice).toLocaleString()}`;
@@ -96,28 +95,15 @@
         ctaBtn.disabled = true;
       } else {
         ctaBtn.addEventListener('click', () => {
-          const qty = document.getElementById('detail-qty').value;
-          addToSelection(item.id, qty);
+          addToSelection(item.id, document.getElementById('detail-qty').value);
         });
       }
 
-      // Related
-      const relatedRoot = document.getElementById('related-grid-root');
-      AppState.products
+      document.getElementById('related-grid-root').innerHTML = AppState.products
         .filter(p => p.id !== item.id)
         .slice(0, 3)
-        .forEach(p => {
-          const div = document.createElement('div');
-          div.className = 'product-card';
-          div.innerHTML = `
-            <img src="${p.img}" alt="${p.name}" onclick="location.href='product.html?id=${p.id}'" style="cursor:pointer;">
-            <h3>${p.name}</h3>
-            <div class="card-footer">
-              <span class="price-tag">₦${Number(p.newPrice).toLocaleString()}</span>
-            </div>
-          `;
-          relatedRoot.appendChild(div);
-        });
+        .map(renderProductCard)
+        .join('');
     });
   </script>
 </body>

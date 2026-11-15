@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create Account | Zara One Stop Shop</title>
+  <title>Your Details | Zara One Stop Shop</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,65 +17,57 @@
 
   <main class="fade-in">
     <div class="form-container">
-      <h2 style="font-size:1.9rem; margin-bottom:6px; text-align:center;">Join Zara</h2>
-      <p style="text-align:center; opacity:0.7; margin-bottom:28px;">Create an account to manage selections easily.</p>
+      <h2 style="font-size:1.9rem; margin-bottom:6px; text-align:center;">Your Details</h2>
+      <p style="text-align:center; opacity:0.7; margin-bottom:28px;">
+        Save your name and phone number on this device so they are added to your WhatsApp orders.
+        There is no password and nothing is sent to our servers.
+      </p>
 
-      <form id="register-form" style="display:flex; flex-direction:column; gap:16px;">
+      <form id="details-form" style="display:flex; flex-direction:column; gap:16px;">
         <div style="display:flex; flex-direction:column; gap:6px;">
           <label style="font-weight:600;">Full Name</label>
-          <input type="text" id="reg-name" required>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-weight:600;">Email Address</label>
-          <input type="email" id="reg-email" required>
+          <input type="text" id="reg-name" required maxlength="80">
         </div>
         <div style="display:flex; flex-direction:column; gap:6px;">
           <label style="font-weight:600;">Phone Number</label>
-          <input type="tel" id="reg-phone" placeholder="e.g. 0803 000 0000" required>
+          <input type="tel" id="reg-phone" placeholder="e.g. 0803 000 0000" required maxlength="20">
         </div>
         <div style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-weight:600;">Create Password</label>
-          <input type="password" id="reg-pass" required minlength="6">
+          <label style="font-weight:600;">Email (optional)</label>
+          <input type="email" id="reg-email" maxlength="120">
         </div>
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <label style="font-weight:600;">Confirm Password</label>
-          <input type="password" id="reg-confirm" required>
-        </div>
-        <button type="submit" class="btn-primary" style="margin-top:8px; width:100%;">Create Account</button>
+        <button type="submit" class="btn-primary" style="margin-top:8px; width:100%;">Save details</button>
       </form>
-
-      <p style="margin-top:22px; text-align:center; font-size:0.95rem;">
-        Already registered? <a href="signin.html" style="color:var(--teal); font-weight:600; text-decoration:underline;">Sign in</a>
-      </p>
     </div>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
   <script src="app.js"></script>
   <script>
-    document.getElementById('register-form').addEventListener('submit', (e) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fill the form if details were saved before
+      if (AppState.user) {
+        document.getElementById('reg-name').value = AppState.user.name || '';
+        document.getElementById('reg-phone').value = AppState.user.phone || '';
+        document.getElementById('reg-email').value = AppState.user.email || '';
+      }
+    });
+
+    document.getElementById('details-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById('reg-name').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
       const phone = document.getElementById('reg-phone').value.trim();
-      const pass = document.getElementById('reg-pass').value;
-      const confirmPass = document.getElementById('reg-confirm').value;
+      const email = document.getElementById('reg-email').value.trim();
 
-      if (pass.length < 6) {
-        showToast('Password must be at least 6 characters.', 'error');
-        return;
-      }
-      if (pass !== confirmPass) {
-        showToast('Passwords do not match.', 'error');
+      if (!name || !phone) {
+        showToast('Enter your name and phone number.', 'error');
         return;
       }
 
-      AppState.user = { name, email, phone };
+      AppState.user = { name, phone, email };
       localStorage.setItem('zara_shop_session', JSON.stringify(AppState.user));
 
-      showToast('Account created successfully!', 'success');
-      setTimeout(() => location.href = 'shop.html', 1000);
+      showToast('Details saved.', 'success');
+      setTimeout(() => (location.href = 'shop.html'), 900);
     });
   </script>
 </body>
