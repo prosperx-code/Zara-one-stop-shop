@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f766e">
   <title>Sign In | Zara One Stop Shop</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,17 +13,21 @@
 <body>
 
   <header>
-    <div class="logo" onclick="location.href='index.html'" style="cursor:pointer;">Zara one stop shop</div>
+    <a href="index.html" class="logo">Zara one stop shop</a>
     <nav class="desktop-nav">
       <a href="index.html">Home</a>
       <a href="shop.html">Shop Catalog</a>
-      <a href="cart.html">Selection (<span class="cart-counter-node">0</span>)</a>
-      <span id="profile-nav-anchor" style="display:flex; align-items:center;"></span>
+      <a href="about.html">Our Story</a>
+      <a href="contact.html">Contact</a>
+      <a href="cart.html">🛒 Selection (<span class="cart-counter-node">0</span>)</a>
+      <span id="profile-nav-anchor" style="display:flex; align-items:center; gap:4px;"></span>
     </nav>
+    <a href="cart.html" class="header-cart" aria-label="Open your cart">🛒 <span class="cart-counter-node">0</span></a>
   </header>
 
   <main class="fade-in">
     <div class="form-container">
+      <p class="back-link"><a href="shop.html">← Back to store</a></p>
       <h2 style="font-size:1.9rem; margin-bottom:6px; text-align:center;">Welcome back</h2>
       <p style="text-align:center; opacity:0.7; margin-bottom:28px;">Sign in to your account.</p>
 
@@ -46,6 +51,14 @@
       </p>
     </div>
   </main>
+
+  <div class="mobile-nav">
+    <a href="index.html"><span>🏠</span><span>Home</span></a>
+    <a href="shop.html"><span>🛍️</span><span>Shop</span></a>
+    <a href="about.html"><span>📖</span><span>Story</span></a>
+    <a href="contact.html"><span>📞</span><span>Contact</span></a>
+    <a href="signin.html" class="active" id="mobile-account-link"><span>👤</span><span>Sign In</span></a>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
   <script src="config.js"></script>
@@ -71,8 +84,14 @@
         return;
       }
 
-      showToast('Signed in. Welcome back!', 'success');
-      setTimeout(() => (location.href = 'shop.html'), 800);
+      // Admins go straight to the admin panel
+      let goAdmin = false;
+      try {
+        const r = await supabaseClient.rpc('is_admin');
+        goAdmin = r.data === true;
+      } catch (err) {}
+      showToast(goAdmin ? 'Signed in. Opening the admin panel…' : 'Signed in. Welcome back!', 'success');
+      setTimeout(() => (location.href = goAdmin ? 'admin.html' : 'shop.html'), 800);
     });
 
     document.getElementById('forgot-link').addEventListener('click', async (e) => {

@@ -98,9 +98,20 @@ async function fetchProducts() {
   }
 }
 
+// Shimmering placeholder cards shown while products load
+function skeletonCards(n = 4) {
+  return Array.from({ length: n }, (_, i) => `
+    <div class="skeleton-card" style="--i:${i}">
+      <div class="sk sk-img"></div>
+      <div class="sk sk-line" style="width:75%; margin:16px 16px 8px;"></div>
+      <div class="sk sk-line" style="width:40%; margin:0 16px 18px;"></div>
+    </div>`).join('');
+}
+
 // One product card, used by the home, shop and product pages
-function renderProductCard(p) {
+function renderProductCard(p, i = 0) {
   const id = Number(p.id);
+  const delay = Math.min(Number(i) || 0, 12);
   const badge =
     p.tag && p.tag !== 'None' ? `<span class="badge">${escapeHtml(p.tag)}</span>` : '';
   const action =
@@ -112,9 +123,9 @@ function renderProductCard(p) {
     : '';
 
   return `
-    <div class="product-card">
+    <div class="product-card" style="--i:${delay}">
       ${badge}
-      <img src="${escapeHtml(safeImgUrl(p.img))}" alt="${escapeHtml(p.name)}"
+      <img src="${escapeHtml(safeImgUrl(p.img))}" alt="${escapeHtml(p.name)}" loading="lazy"
            onclick="location.href='product.html?id=${id}'" style="cursor:pointer;">
       <h3>${escapeHtml(p.name)}</h3>
       <div class="card-footer">
@@ -127,6 +138,18 @@ function renderProductCard(p) {
 // ------------------------------------------------------------
 // Cart helpers
 // ------------------------------------------------------------
+function flashAddedButton(btn) {
+  if (!btn || btn.disabled) return;
+  if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+  btn.classList.add('added');
+  btn.textContent = '✓ Added';
+  clearTimeout(btn._flashTimer);
+  btn._flashTimer = setTimeout(() => {
+    btn.classList.remove('added');
+    btn.textContent = btn.dataset.label;
+  }, 1200);
+}
+
 function addToSelection(productId, quantity = 1) {
   const targetId = parseInt(productId, 10);
   let qtyNum = parseInt(quantity, 10);
@@ -151,6 +174,11 @@ function addToSelection(productId, quantity = 1) {
   }
 
   saveSelectionCartState();
+
+  // Button feedback: the clicked button turns green for a moment
+  const evt = window.event;
+  if (evt && evt.currentTarget instanceof HTMLElement) flashAddedButton(evt.currentTarget);
+
   showToast(`${product.name} added to selection.`);
 }
 
@@ -184,10 +212,22 @@ function saveSelectionCartState() {
   updateCartCounter();
 }
 
+let lastCartTotal = null;
+
 function updateCartCounter() {
   const nodes = document.querySelectorAll('.cart-counter-node');
   const total = AppState.cart.reduce((sum, current) => sum + current.qty, 0);
   nodes.forEach((n) => (n.textContent = total));
+
+  // Little "pop" on the cart badge when something is added
+  if (lastCartTotal !== null && total > lastCartTotal) {
+    document.querySelectorAll('.cart-counter-node, .header-cart').forEach((n) => {
+      n.classList.remove('bump');
+      void n.offsetWidth; // restart the animation
+      n.classList.add('bump');
+    });
+  }
+  lastCartTotal = total;
 }
 
 // ------------------------------------------------------------
@@ -198,14 +238,13 @@ function showToast(message, type = 'info') {
   if (!container) {
     container = document.createElement('div');
     container.id = 'toast-notification-hub';
-    container.style.cssText =
-      'position:fixed; bottom:30px; right:30px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:360px;';
+    container.className = 'toast-hub';
     document.body.appendChild(container);
   }
 
   const box = document.createElement('div');
-  const bg = type === 'error' ? 'var(--clay)' : type === 'success' ? '#0d9488' : 'var(--teal)';
-  box.style.cssText = `background:${bg}; color:var(--white); padding:14px 22px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); font-weight:500; font-size:0.95rem; animation:fadeInFrame 0.3s ease;`;
+  box.className = 'toast';
+  box.style.background = type === 'error' ? 'var(--clay)' : type === 'success' ? '#0d9488' : 'var(--teal)';
   box.textContent = message;
   container.appendChild(box);
 
@@ -218,7 +257,7 @@ function showToast(message, type = 'info') {
 }
 
 // ------------------------------------------------------------
-// Customer accounts (real Supabase sign-in)
+// Customer accounts (real Supabase sign-in) + admin shortcut
 // ------------------------------------------------------------
 function userFromSession(session) {
   if (!session || !session.user) return null;
@@ -229,6 +268,22 @@ function userFromSession(session) {
     name: String(meta.name || ''),
     phone: String(meta.phone || '')
   };
+}
+
+// Asks the database if the signed-in person is an admin (admins see an Admin link)
+async function refreshAdminFlag() {
+  if (!supabaseClient || !AppState.user) {
+    AppState.isAdmin = false;
+    renderProfileNavigationAnchors();
+    return;
+  }
+  try {
+    const { data, error } = await supabaseClient.rpc('is_admin');
+    AppState.isAdmin = !error && data === true;
+  } catch (e) {
+    AppState.isAdmin = false;
+  }
+  renderProfileNavigationAnchors();
 }
 
 async function initAuth() {
@@ -242,46 +297,67 @@ async function initAuth() {
     AppState.user = null;
   }
   renderProfileNavigationAnchors();
+  await refreshAdminFlag();
 
   // Keep the menu in sync when someone signs in or out (also in other tabs)
   supabaseClient.auth.onAuthStateChange((event, session) => {
     AppState.user = userFromSession(session);
     renderProfileNavigationAnchors();
+    // Run the admin check right after this callback, not inside it
+    setTimeout(refreshAdminFlag, 0);
   });
+}
+
+function setMobileAccountLink(el, href, label) {
+  if (!el) return;
+  el.href = href;
+  el.innerHTML = `<span>👤</span><span>${label}</span>`;
 }
 
 function renderProfileNavigationAnchors() {
   const anchor = document.getElementById('profile-nav-anchor');
   const mobile = document.getElementById('mobile-account-link');
+  const mobileNav = document.querySelector('.mobile-nav');
+
+  const adminLink = AppState.isAdmin
+    ? `<a href="admin.html" style="font-weight:600; color:var(--marigold); margin-right:14px;">⚙️ Admin</a>`
+    : '';
 
   if (AppState.user) {
     const label = AppState.user.name || AppState.user.email.split('@')[0] || 'there';
     const first = escapeHtml(label.split(' ')[0]);
     if (anchor) {
       anchor.innerHTML = `
+        ${adminLink}
         <a href="account.html" style="font-weight:600; color:var(--marigold);">Hi, ${first}</a>
         <a href="#" onclick="processAccountLogOut(); return false;" style="font-size:0.9rem; opacity:0.85; margin-left:12px;">Sign out</a>`;
     }
-    if (mobile) {
-      mobile.href = 'account.html';
-      mobile.textContent = '👤 Account';
-    }
+    setMobileAccountLink(mobile, 'account.html', 'Account');
   } else {
     if (anchor) {
       anchor.innerHTML = `
         <a href="signin.html">Sign In</a>
         <a href="register.html" class="btn-secondary" style="padding:6px 14px; font-size:0.85rem; margin-left:12px;">Register</a>`;
     }
-    if (mobile) {
-      mobile.href = 'signin.html';
-      mobile.textContent = '👤 Sign In';
-    }
+    setMobileAccountLink(mobile, 'signin.html', 'Sign In');
+  }
+
+  // Admins get a shortcut in the mobile bar too
+  const mobileAdmin = document.getElementById('mobile-admin-link');
+  if (AppState.isAdmin && mobileNav && !mobileAdmin) {
+    mobileNav.insertAdjacentHTML(
+      'beforeend',
+      '<a href="admin.html" id="mobile-admin-link"><span>⚙️</span><span>Admin</span></a>'
+    );
+  } else if (!AppState.isAdmin && mobileAdmin) {
+    mobileAdmin.remove();
   }
 }
 
 async function processAccountLogOut() {
   if (supabaseClient) await supabaseClient.auth.signOut();
   AppState.user = null;
+  AppState.isAdmin = false;
   showToast('You have signed out.');
   setTimeout(() => window.location.reload(), 700);
 }
@@ -290,10 +366,68 @@ async function processAccountLogOut() {
 const authReady = initAuth();
 
 // ------------------------------------------------------------
+// Motion & polish (header shadow, scroll reveal, page transitions)
+// ------------------------------------------------------------
+function initUiEffects() {
+  // Header gets a shadow once you scroll
+  const header = document.querySelector('header');
+  if (header) {
+    const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  // Sections fade up as they enter the screen
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if ('IntersectionObserver' in window && !reduceMotion) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (en.isIntersecting) {
+            en.target.classList.add('in-view');
+            io.unobserve(en.target);
+          }
+        });
+      },
+      { threshold: 0, rootMargin: '0px 0px -40px 0px' }
+    );
+    document
+      .querySelectorAll('main > section, main > h2, main > hr, .section-title, .reveal-on-scroll')
+      .forEach((el) => {
+        el.classList.add('reveal');
+        io.observe(el);
+      });
+  }
+
+  // Smooth fade between pages
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (a.target === '_blank' || a.hasAttribute('download')) return;
+
+    const href = a.getAttribute('href') || '';
+    if (!href || href.startsWith('#') || /^(mailto:|tel:|javascript:)/i.test(href)) return;
+
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin) return;
+    if (url.pathname === location.pathname && url.search === location.search) return;
+
+    e.preventDefault();
+    document.body.classList.add('leaving');
+    setTimeout(() => {
+      location.href = url.href;
+    }, 170);
+  });
+  // Coming back with the Back button should not leave the page faded out
+  window.addEventListener('pageshow', () => document.body.classList.remove('leaving'));
+}
+
+// ------------------------------------------------------------
 // Init
 // ------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
   updateCartCounter();
   renderProfileNavigationAnchors();
+  initUiEffects();
   await loadProducts();
 });

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f766e">
   <title>Our Story | Zara One Stop Shop</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,14 +13,16 @@
 <body>
 
   <header>
-    <div class="logo" onclick="location.href='index.html'">Zara one stop shop</div>
+    <a href="index.html" class="logo">Zara one stop shop</a>
     <nav class="desktop-nav">
       <a href="index.html">Home</a>
       <a href="shop.html">Shop Catalog</a>
-      <a href="about.html" style="color:var(--marigold);" class="active">Our Story</a>
+      <a href="about.html" class="active">Our Story</a>
       <a href="contact.html">Contact</a>
-    <span id="profile-nav-anchor" style="display:flex; align-items:center;"></span>
+      <a href="cart.html">🛒 Selection (<span class="cart-counter-node">0</span>)</a>
+      <span id="profile-nav-anchor" style="display:flex; align-items:center; gap:4px;"></span>
     </nav>
+    <a href="cart.html" class="header-cart" aria-label="Open your cart">🛒 <span class="cart-counter-node">0</span></a>
   </header>
 
   <main class="fade-in" style="max-width:1000px; margin:60px auto; padding:0 20px;">
@@ -43,7 +46,7 @@
     <hr style="border:none; border-top:1px solid var(--sand); margin-bottom:48px;">
 
     <h2 style="text-align:center; margin-bottom:32px; font-size:1.7rem;">Core Brand Commitments</h2>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:24px; text-align:center;">
+    <div class="reveal-on-scroll" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:24px; text-align:center;">
       <div style="background:var(--white); padding:32px 24px; border-radius:var(--radius); box-shadow:var(--shadow);">
         <div style="font-size:2rem; margin-bottom:12px;">🔍</div>
         <h3 style="margin-bottom:8px;">Quality Verification</h3>
@@ -58,12 +61,11 @@
   </main>
 
   <div class="mobile-nav">
-    <a href="index.html">🏠 Home</a>
-    <a href="shop.html">🛍️ Shop</a>
-    <a href="cart.html">
-    <span>🛒</span><span>Cart (<span class="cart-counter-node">0</span>)</span></a>
-    <a href="contact.html">📞 Contact</a>
-    <a href="signin.html" id="mobile-account-link">👤 Sign In</a>
+    <a href="index.html"><span>🏠</span><span>Home</span></a>
+    <a href="shop.html"><span>🛍️</span><span>Shop</span></a>
+    <a href="about.html" class="active"><span>📖</span><span>Story</span></a>
+    <a href="contact.html"><span>📞</span><span>Contact</span></a>
+    <a href="signin.html" id="mobile-account-link"><span>👤</span><span>Sign In</span></a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
